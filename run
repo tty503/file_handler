@@ -1,0 +1,62 @@
+#!/usr/bin/bash 
+
+###################################################
+# Main File
+MAIN=`echo "$1" | cut -d '.' -f1`
+
+# Paths 
+BIN="./bin"
+OBJ="./obj"
+SRC="./src"
+###################################################
+# Sources Files 
+FILE_H_C="$SRC/file_handler.c"
+FILE_H_STR_C="$SRC/file_handler_str.c"
+FILE_H_UCHAR_C="$SRC/file_handler_uchar.c"
+
+# Assembly Files 
+FILE_H_S="$OBJ/file_handler.s"
+FILE_H_STR_S="$OBJ/file_handler_str.s"
+FILE_H_UCHAR_S="$OBJ/file_handler_uchar.S"
+
+# Object Files 
+FILE_H_O="$OBJ/file_handler.o"
+FILE_H_STR_O="$OBJ/file_handler_str.o"
+FILE_H_UCHAR_O="$OBJ/file_handler_uchar.o"
+####################################################
+
+echo "BUILD TO $MAIN"
+if [ -f "$BIN/$MAIN.exe" ]; then 
+	SIG_SHA256=`sha256sum "$BIN/$MAIN.exe"`
+	rm -rf $OBJ/* 
+	rm "$BIN/$MAIN.exe"
+	echo "CLEARING OBJ FILES"
+	echo "SHA256 OLD : $SIG_SHA256" 
+fi
+# SRC TO ASM 
+i686-w64-mingw32-gcc -W -Wall -S -masm=intel -o "$OBJ/$MAIN.s" "$SRC/$MAIN.c"
+i686-w64-mingw32-gcc -W -Wall -S -masm=intel -o $FILE_H_S $FILE_H_C 
+i686-w64-mingw32-gcc -W -Wall -S -masm=intel -o $FILE_H_STR_S $FILE_H_STR_C  
+i686-w64-mingw32-gcc -W -Wall -S -masm=intel -o $FILE_H_UCHAR_S $FILE_H_UCHAR_C 
+###############################################################################
+# ASM TO OBJ 
+i686-w64-mingw32-gcc -W -Wall -c "$OBJ/$MAIN.s" -o "$OBJ/$MAIN.o"
+i686-w64-mingw32-gcc -W -Wall -c $FILE_H_S -o $FILE_H_O
+i686-w64-mingw32-gcc -W -Wall -c $FILE_H_STR_S -o $FILE_H_STR_O
+i686-w64-mingw32-gcc -W -Wall -c $FILE_H_UCHAR_S -o $FILE_H_UCHAR_O
+################################################################################
+# OBJ TO EXE
+i686-w64-mingw32-gcc -W -Wall -o "$BIN/$MAIN.exe" "$OBJ/$MAIN.o" $FILE_H_O $FILE_H_STR_O $FILE_H_UCHAR_O 
+########################################################################################################
+
+if [ -f "$BIN/$MAIN.exe" ]; then 
+	SIG_SHA256=`sha256sum "$BIN/$MAIN.exe"`
+	echo $SIG_SHA256 ":" && date >> success_records.log
+	
+	echo "SHA256 NEW : $SIG_SHA256"
+	echo "Compilation successful, check logic please."
+else
+	date >> failure_records.log
+	echo "Unbelievable, you failed again."
+	echo "You should consider drinking some more coffee and try again."
+fi
